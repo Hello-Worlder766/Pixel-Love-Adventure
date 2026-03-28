@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
 body {
   background:#1a0a2e;
   display:flex;
@@ -63,61 +65,83 @@ canvas {
 </div>
 
 <script>
+// TEMPLATE VARIABLES
 const PLAYER_NAME = "{{PLAYER_NAME}}"
 const PARTNER_NAME = "{{PARTNER_NAME}}"
 
+// UI TEXT
 document.getElementById('title').textContent =
   `${PLAYER_NAME}'s Adventure 💕`
 
 document.getElementById('desc').textContent =
 `Help ${PLAYER_NAME} collect all the hearts ♥
 
-Avoid ghosts and reach ${PARTNER_NAME}!`
+Avoid obstacles and reach ${PARTNER_NAME}!`
 
+// CANVAS
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
 
-let player = {x:40,y:260,vx:0,vy:0,onGround:true}
+// GAME STATE
+let player, hearts, enemies, platforms
+let running = false
 let gravity = 0.6
 
-let hearts = [
-  {x:150,y:200,collected:false},
-  {x:300,y:180,collected:false},
-  {x:420,y:200,collected:false}
-]
+function init(){
+  player = {x:40,y:200,vx:0,vy:0,onGround:false}
 
-let ghosts = [
-  {x:200,y:240,dir:1},
-  {x:350,y:240,dir:-1}
-]
+  platforms = [
+    {x:0,y:280,w:480,h:40},
+    {x:120,y:220,w:100,h:10},
+    {x:280,y:180,w:100,h:10}
+  ]
 
-let running = false
+  hearts = [
+    {x:140,y:190,collected:false},
+    {x:300,y:150,collected:false},
+    {x:420,y:240,collected:false}
+  ]
 
+  enemies = [
+    {x:200,y:260,dir:1},
+    {x:350,y:260,dir:-1}
+  ]
+}
+
+// UPDATE
 function update(){
   if(!running) return
 
   player.vy += gravity
   player.y += player.vy
+  player.onGround = false
 
-  if(player.y > 260){
-    player.y = 260
-    player.vy = 0
-    player.onGround = true
-  }
+  platforms.forEach(p=>{
+    if(player.x < p.x+p.w &&
+       player.x+20 > p.x &&
+       player.y < p.y+p.h &&
+       player.y+20 > p.y){
 
-  ghosts.forEach(g=>{
-    g.x += g.dir * 1.5
-    if(g.x < 100 || g.x > 380) g.dir *= -1
+      if(player.vy > 0){
+        player.y = p.y - 20
+        player.vy = 0
+        player.onGround = true
+      }
+    }
+  })
 
-    if(Math.abs(player.x-g.x)<20 && Math.abs(player.y-g.y)<20){
+  enemies.forEach(e=>{
+    e.x += e.dir * 1.5
+    if(e.x < 100 || e.x > 380) e.dir *= -1
+
+    if(Math.abs(player.x-e.x)<20 && Math.abs(player.y-e.y)<20){
       showOverlay("💀 Game Over","Try again!","RETRY",()=>{
-        reset()
-        running=true
+        init(); running=true
       })
     }
   })
 
-  let collectedCount = 0
+  let count = 0
 
   hearts.forEach(h=>{
     if(!h.collected &&
@@ -125,25 +149,31 @@ function update(){
        Math.abs(player.y-h.y)<20){
       h.collected = true
     }
-    if(h.collected) collectedCount++
+    if(h.collected) count++
   })
 
-  if(collectedCount === hearts.length){
+  if(count === hearts.length){
     showOverlay(
       `🎉 ${PLAYER_NAME} WINS!`,
-      `${PLAYER_NAME} saved ${PARTNER_NAME}! 💕`,
+      `${PLAYER_NAME} reached ${PARTNER_NAME}! 💕`,
       "PLAY AGAIN",
       ()=>{
-        reset()
-        running=true
+        init(); running=true
       }
     )
   }
 }
 
+// DRAW
 function draw(){
   ctx.fillStyle="#1a0a2e"
   ctx.fillRect(0,0,480,320)
+
+  // platforms
+  ctx.fillStyle="#5c2d8a"
+  platforms.forEach(p=>{
+    ctx.fillRect(p.x,p.y,p.w,p.h)
+  })
 
   // hearts
   ctx.fillStyle="#ff4d8d"
@@ -151,30 +181,29 @@ function draw(){
     if(!h.collected) ctx.fillRect(h.x,h.y,10,10)
   })
 
-  // ghosts
+  // enemies
   ctx.fillStyle="#b0c4ff"
-  ghosts.forEach(g=>{
-    ctx.fillRect(g.x,g.y,20,20)
+  enemies.forEach(e=>{
+    ctx.fillRect(e.x,e.y,20,20)
   })
 
   // player
   ctx.fillStyle="#ff9de2"
   ctx.fillRect(player.x,player.y,20,20)
+
+  // partner goal
+  ctx.fillStyle="#ffe066"
+  ctx.fillRect(440,240,20,40)
 }
 
+// LOOP
 function loop(){
   update()
   draw()
   requestAnimationFrame(loop)
 }
 
-function reset(){
-  player.x = 40
-  player.y = 260
-  player.vy = 0
-  hearts.forEach(h=>h.collected=false)
-}
-
+// OVERLAY
 function showOverlay(t,m,b,cb){
   const ov = document.getElementById('overlay')
   ov.style.display='flex'
@@ -187,18 +216,19 @@ function showOverlay(t,m,b,cb){
   }
 }
 
+// START
 document.getElementById('start').onclick = ()=>{
   document.getElementById('overlay').style.display='none'
-  reset()
+  init()
   running = true
 }
 
+// CONTROLS
 document.addEventListener('keydown',e=>{
   if(e.key==="ArrowLeft") player.x-=5
   if(e.key==="ArrowRight") player.x+=5
   if(e.key===" " && player.onGround){
     player.vy = -12
-    player.onGround=false
   }
 })
 
