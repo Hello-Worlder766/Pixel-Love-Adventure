@@ -2,37 +2,21 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
 <title>{{PLAYER_NAME}}'s Adventure 💕</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
 <style>
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-
 body {
-  background: #1a0a2e;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  font-family: 'Press Start 2P', monospace;
-  overflow: hidden;
-}
-
-#ui {
+  background:#1a0a2e;
   display:flex;
-  justify-content:space-between;
-  width:480px;
-  max-width:95vw;
-  padding:8px;
-}
-
-#ui span {
-  color:#ffb3d9;
-  font-size:7px;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  font-family:'Press Start 2P', monospace;
 }
 
 canvas {
@@ -41,30 +25,10 @@ canvas {
   image-rendering:pixelated;
 }
 
-#controls {
-  display:flex;
-  gap:12px;
-  margin-top:12px;
-}
-
-.btn {
-  background:#3d1a5e;
-  border:2px solid #ff69b4;
-  color:#fff;
-  font-size:20px;
-  padding:18px 24px;
-  border-radius:8px;
-}
-
-.btn:active {
-  transform:scale(0.9);
-  box-shadow:0 0 20px #ff69b4;
-}
-
 #overlay {
   position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
+  top:0;left:0;
+  width:100%;height:100%;
   background:#1a0a2eee;
   display:flex;
   flex-direction:column;
@@ -83,34 +47,14 @@ canvas {
   color:#ffb3d9;
   font-size:10px;
   text-align:center;
-  max-width:300px;
   white-space:pre-line;
-}
-
-#overlay button {
-  background:#ff69b4;
-  color:#fff;
-  padding:12px 20px;
-  border:none;
 }
 </style>
 </head>
 
 <body>
 
-<div id="ui">
-  <span id="level-ui">LEVEL 1</span>
-  <span id="hearts-ui">♥ 0/5</span>
-  <span id="lives-ui">LIVES: 3</span>
-</div>
-
 <canvas id="game" width="480" height="320"></canvas>
-
-<div id="controls">
-  <button class="btn" id="left">◀</button>
-  <button class="btn" id="jump">▲</button>
-  <button class="btn" id="right">▶</button>
-</div>
 
 <div id="overlay">
   <h1 id="title"></h1>
@@ -122,10 +66,9 @@ canvas {
 const PLAYER_NAME = "{{PLAYER_NAME}}"
 const PARTNER_NAME = "{{PARTNER_NAME}}"
 
-const GAME_TITLE = `${PLAYER_NAME}'s Adventure 💕`
-const WIN_MESSAGE = `${PLAYER_NAME} saved ${PARTNER_NAME}! 💕`
+document.getElementById('title').textContent =
+  `${PLAYER_NAME}'s Adventure 💕`
 
-document.getElementById('title').textContent = GAME_TITLE
 document.getElementById('desc').textContent =
 `Help ${PLAYER_NAME} collect all the hearts ♥
 
@@ -134,29 +77,21 @@ Avoid ghosts and reach ${PARTNER_NAME}!`
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
 
-let player = {x:40,y:200,vx:0,vy:0,onGround:false}
+let player = {x:40,y:260,vx:0,vy:0,onGround:true}
 let gravity = 0.6
-let level = 0
-let hearts = []
-let ghosts = []
-let collected = 0
+
+let hearts = [
+  {x:150,y:200,collected:false},
+  {x:300,y:180,collected:false},
+  {x:420,y:200,collected:false}
+]
+
+let ghosts = [
+  {x:200,y:240,dir:1},
+  {x:350,y:240,dir:-1}
+]
+
 let running = false
-
-function init(){
-  collected = 0
-  player = {x:40,y:200,vx:0,vy:0,onGround:false}
-
-  hearts = [
-    {x:150,y:200},
-    {x:300,y:160},
-    {x:420,y:200}
-  ]
-
-  ghosts = [
-    {x:200,y:260,dir:1},
-    {x:350,y:260,dir:-1}
-  ]
-}
 
 function update(){
   if(!running) return
@@ -171,38 +106,38 @@ function update(){
   }
 
   ghosts.forEach(g=>{
-    g.x += g.dir * (1 + level*0.2)
+    g.x += g.dir * 1.5
     if(g.x < 100 || g.x > 380) g.dir *= -1
 
-    if(Math.abs(player.x - g.x) < 20 && Math.abs(player.y - g.y) < 20){
-      showOverlay("💀 Game Over", "Try again!", "RETRY", ()=>{
-        init()
-        running = true
+    if(Math.abs(player.x-g.x)<20 && Math.abs(player.y-g.y)<20){
+      showOverlay("💀 Game Over","Try again!","RETRY",()=>{
+        reset()
+        running=true
       })
     }
   })
 
+  let collectedCount = 0
+
   hearts.forEach(h=>{
-    if(!h.collected && Math.abs(player.x-h.x)<20 && Math.abs(player.y-h.y)<20){
+    if(!h.collected &&
+       Math.abs(player.x-h.x)<20 &&
+       Math.abs(player.y-h.y)<20){
       h.collected = true
-      collected++
-      spawnParticles(h.x,h.y)
-
-      if(collected === hearts.length){
-        showOverlay(`🎉 ${PLAYER_NAME} WINS!`, WIN_MESSAGE, "PLAY AGAIN", ()=>{
-          level=0
-          init()
-          running=true
-        })
-      }
     }
+    if(h.collected) collectedCount++
   })
-}
 
-function spawnParticles(x,y){
-  for(let i=0;i<12;i++){
-    ctx.fillStyle="#ff69b4"
-    ctx.fillRect(x+Math.random()*10,y+Math.random()*10,3,3)
+  if(collectedCount === hearts.length){
+    showOverlay(
+      `🎉 ${PLAYER_NAME} WINS!`,
+      `${PLAYER_NAME} saved ${PARTNER_NAME}! 💕`,
+      "PLAY AGAIN",
+      ()=>{
+        reset()
+        running=true
+      }
+    )
   }
 }
 
@@ -210,16 +145,19 @@ function draw(){
   ctx.fillStyle="#1a0a2e"
   ctx.fillRect(0,0,480,320)
 
+  // hearts
   ctx.fillStyle="#ff4d8d"
   hearts.forEach(h=>{
     if(!h.collected) ctx.fillRect(h.x,h.y,10,10)
   })
 
+  // ghosts
   ctx.fillStyle="#b0c4ff"
   ghosts.forEach(g=>{
     ctx.fillRect(g.x,g.y,20,20)
   })
 
+  // player
   ctx.fillStyle="#ff9de2"
   ctx.fillRect(player.x,player.y,20,20)
 }
@@ -228,6 +166,13 @@ function loop(){
   update()
   draw()
   requestAnimationFrame(loop)
+}
+
+function reset(){
+  player.x = 40
+  player.y = 260
+  player.vy = 0
+  hearts.forEach(h=>h.collected=false)
 }
 
 function showOverlay(t,m,b,cb){
@@ -244,7 +189,7 @@ function showOverlay(t,m,b,cb){
 
 document.getElementById('start').onclick = ()=>{
   document.getElementById('overlay').style.display='none'
-  init()
+  reset()
   running = true
 }
 
@@ -253,7 +198,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==="ArrowRight") player.x+=5
   if(e.key===" " && player.onGround){
     player.vy = -12
-    player.onGround = false
+    player.onGround=false
   }
 })
 
