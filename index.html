@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>{{PLAYER_NAME}}'s Adventure 💕</title>
+<title>Rescue Nathan! 💕</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -146,6 +145,7 @@ canvas {
 
 <canvas id="game" width="480" height="320"></canvas>
 
+<!-- FIX #1: removed duplicate id="power-ui" -->
 <div id="power-indicator"></div>
 
 <div id="controls">
@@ -155,23 +155,16 @@ canvas {
 </div>
 
 <div id="overlay">
-  <h1 id="game-title"></h1>
-  <p>
-Help {{PLAYER_NAME}} collect all the hearts ♥
+  <h1>💕 Rescue Nathan! 💕</h1>
+  <p>Nathan has been captured by a spooky ghost!
 
-Avoid ghosts and reach {{PARTNER_NAME}}!
-  </p>
+Play as Jerrie 👸 — collect all the hearts ♥ and sweet treats 🍰 to set him free!
+
+Arrow keys or buttons to move. Jump to avoid ghosts!</p>
   <button id="start-btn">START ADVENTURE ♥</button>
 </div>
 
 <script>
-
-const PLAYER_NAME = "{{PLAYER_NAME}}"
-const PARTNER_NAME = "{{PARTNER_NAME}}"
-
-document.getElementById('game-title').textContent =
-  `${PLAYER_NAME}'s Adventure 💕`
-
 // ---- STAR BACKGROUND ----
 const starCanvas = document.getElementById('stars-bg')
 const starCtx = starCanvas.getContext('2d')
@@ -371,7 +364,7 @@ function update(){
     player.deadTimer--
     if(player.deadTimer<=0){
       if(lives<=0){
-        showOverlay('💀 OH NO!', 'The ghost got ${PARTNER_NAME}...\n\nTry again ${PLAYER_NAME}', 'TRY AGAIN ♥', ()=>{ lives=3; initLevel(level); gameRunning=true })
+        showOverlay('💀 OH NO!', 'The ghost got Nathan...\n\nTry again Jerrie!', 'TRY AGAIN ♥', ()=>{ lives=3; initLevel(level); gameRunning=true })
       } else {
         initLevel(level)
       }
@@ -473,25 +466,17 @@ function update(){
     winTimer++
     if(winTimer > 30){
       won = true
- if(level < LEVELS.length - 1){
-  showOverlay(
-    `💕 LEVEL ${level+1} CLEAR!`,
-    `Nice work ${PLAYER_NAME}!\n\nKeep going to reach ${PARTNER_NAME}!`,
-    'NEXT LEVEL ♥',
-    ()=>{
-      level++; initLevel(level); gameRunning=true; won=false; winTimer=0
+      if(level < LEVELS.length - 1){
+        showOverlay(`💕 LEVEL ${level+1} CLEAR!`, `Amazing Jerrie!\n\nKeep going to rescue Nathan!`, 'NEXT LEVEL ♥', ()=>{
+          level++; initLevel(level); gameRunning=true; won=false; winTimer=0
+        })
+      } else {
+        // FIX #5: \n\n renders correctly now via white-space: pre-line on #overlay p
+        showOverlay('🎉 YOU DID IT! 💕', '"You set me free, hooray we can snuggle now!"\n\n— Nathan 💕', 'PLAY AGAIN ♥', ()=>{
+          level=0; lives=3; initLevel(level); gameRunning=true; won=false; winTimer=0
+        })
+      }
     }
-  )
-} else {
-  showOverlay(
-    '🎉 YOU DID IT! 💕',
-    `${PLAYER_NAME} reached ${PARTNER_NAME}! 💕`,
-    'PLAY AGAIN ♥',
-    ()=>{
-      level=0; lives=3; initLevel(level); gameRunning=true; won=false; winTimer=0
-    }
-  )
-}
   } else {
     winTimer = 0
   }
