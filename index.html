@@ -1,127 +1,384 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-
-<title>{{PLAYER_NAME}}'s Adventure 💕</title>
-
+<title>Rescue Nathan! 💕</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
 body {
   background: #1a0a2e;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  min-height:100vh;
-  font-family:'Press Start 2P', monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Press Start 2P', monospace;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
 }
+
+#stars {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#ui {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 480px;
+  max-width: 95vw;
+  padding: 8px 4px;
+}
+
+#ui span {
+  color: #ffb3d9;
+  font-size: 7px;
+  text-shadow: 0 0 8px #ff69b4;
+}
+
+#hearts-ui { color: #ff4d8d !important; font-size: 9px !important; }
 
 canvas {
-  border:3px solid #ff69b4;
-  max-width:95vw;
-  image-rendering:pixelated;
+  display: block;
+  border: 3px solid #ff69b4;
+  box-shadow: 0 0 30px #ff69b460, 0 0 60px #9b59b620;
+  image-rendering: pixelated;
+  touch-action: none;
+  position: relative;
+  z-index: 2;
+  max-width: 95vw;
 }
 
+#controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  z-index: 2;
+  position: relative;
+}
+
+.btn {
+  background: #3d1a5e;
+  border: 2px solid #ff69b4;
+  color: #ffb3d9;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 10px #ff69b430;
+  touch-action: manipulation;
+}
+.btn:active { background: #5d2a7e; transform: scale(0.95); }
+
 #overlay {
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:#1a0a2eee;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:20px;
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  background: #1a0a2eee;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  gap: 20px;
 }
 
 #overlay h1 {
-  color:#ff69b4;
-  font-size:16px;
-  text-align:center;
+  color: #ff69b4;
+  font-size: clamp(10px, 3vw, 18px);
+  text-align: center;
+  text-shadow: 0 0 20px #ff69b4;
+  line-height: 2;
 }
 
 #overlay p {
-  color:#ffb3d9;
-  font-size:10px;
-  text-align:center;
-  white-space:pre-line;
+  color: #ffb3d9;
+  font-size: clamp(7px, 2vw, 10px);
+  text-align: center;
+  line-height: 2.2;
+  max-width: 360px;
+  padding: 0 20px;
+  white-space: pre-line;
+}
+
+#overlay button {
+  background: #ff69b4;
+  border: none;
+  color: white;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(8px, 2vw, 11px);
+  padding: 14px 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 20px #ff69b460;
+  margin-top: 10px;
+}
+#overlay button:hover { background: #ff4d8d; }
+
+#power-indicator {
+  position: relative;
+  z-index: 2;
+  color: #ffe066;
+  font-size: 7px;
+  height: 16px;
+  text-shadow: 0 0 8px #ffe066;
 }
 </style>
 </head>
-
 <body>
+
+<canvas id="stars-bg" style="position:fixed;top:0;left:0;z-index:0;pointer-events:none;"></canvas>
+
+<div id="ui">
+  <span id="level-ui">LEVEL 1</span>
+  <span id="hearts-ui">♥ 0/5</span>
+  <span id="lives-ui">LIVES: 3</span>
+</div>
 
 <canvas id="game" width="480" height="320"></canvas>
 
+<!-- FIX #1: removed duplicate id="power-ui" -->
+<div id="power-indicator"></div>
+
+<div id="controls">
+  <button class="btn" id="btn-left">◀</button>
+  <button class="btn" id="btn-jump">▲</button>
+  <button class="btn" id="btn-right">▶</button>
+</div>
+
 <div id="overlay">
-  <h1 id="title"></h1>
-  <p id="desc"></p>
+  <h1>💕 Rescue Nathan! 💕</h1>
+  <p>Nathan has been captured by a spooky ghost!
+
+Play as Jerrie 👸 — collect all the hearts ♥ and sweet treats 🍰 to set him free!
+
+Arrow keys or buttons to move. Jump to avoid ghosts!</p>
   <button id="start-btn">START ADVENTURE ♥</button>
 </div>
 
 <script>
+// ---- STAR BACKGROUND ----
+const starCanvas = document.getElementById('stars-bg')
+const starCtx = starCanvas.getContext('2d')
+function resizeStars(){
+  starCanvas.width = window.innerWidth
+  starCanvas.height = window.innerHeight
+}
+resizeStars()
+window.addEventListener('resize', resizeStars)
+const stars = Array.from({length:80}, ()=>({
+  x: Math.random()*window.innerWidth,
+  y: Math.random()*window.innerHeight,
+  r: Math.random()*1.5+0.3,
+  a: Math.random(),
+  speed: Math.random()*0.01+0.005
+}))
+function drawStars(){
+  starCtx.clearRect(0,0,starCanvas.width,starCanvas.height)
+  stars.forEach(s=>{
+    s.a += s.speed
+    const alpha = 0.3 + 0.7*Math.abs(Math.sin(s.a))
+    starCtx.beginPath()
+    starCtx.arc(s.x, s.y, s.r, 0, Math.PI*2)
+    starCtx.fillStyle = `rgba(255,200,230,${alpha})`
+    starCtx.fill()
+  })
+  requestAnimationFrame(drawStars)
+}
+drawStars()
 
-// ===== TEMPLATE =====
-const PLAYER_NAME = "{{PLAYER_NAME}}"
-const PARTNER_NAME = "{{PARTNER_NAME}}"
-
-// ===== UI =====
-document.getElementById('title').textContent =
-  `${PLAYER_NAME}'s Adventure 💕`
-
-document.getElementById('desc').textContent =
-`Help ${PLAYER_NAME} collect all the hearts ♥
-
-Avoid ghosts and reach ${PARTNER_NAME}!`
-
-// ===== GAME =====
+// ---- GAME ----
 const canvas = document.getElementById('game')
 const ctx = canvas.getContext('2d')
-
-const GRAVITY = 0.6
+const W = 480, H = 320
+const GRAVITY = 0.55
 const JUMP_FORCE = -12
 const SPEED = 3.5
 
-let keys = { left:false, right:false, jump:false }
-
-let player, platforms, hearts, ghosts
-let running = false
-
-function init(){
-  player = { x:40, y:220, vx:0, vy:0, onGround:false, facing:1, jumpPressed:false }
-
-  platforms = [
-    {x:0,y:288,w:480,h:32},
-    {x:80,y:224,w:96,h:16},
-    {x:240,y:192,w:96,h:16}
-  ]
-
-  hearts = [
-    {x:100,y:200,collected:false},
-    {x:260,y:168,collected:false},
-    {x:375,y:216,collected:false}
-  ]
-
-  ghosts = [
-    {x:200,y:256,dir:1},
-    {x:360,y:208,dir:-1}
-  ]
+const C = {
+  sky1: '#2d0a4e', sky2: '#1a0a2e',
+  ground: '#7b3fa0', groundTop: '#c264e8',
+  platform: '#5c2d8a', platformTop: '#a855d4',
+  heart: '#ff4d8d', heartGlow: '#ff69b490',
+  treat: '#ffe066', treatGlow: '#ffe06680',
+  cage: '#888', cageBar: '#aaa',
+  ghost: '#b0c4ff', ghostEye: '#3050ff',
+  princess: '#ff9de2', princessDress: '#ff4da6',
+  princessHair: '#4a2800', princessCrown: '#ffe066',
+  nathan: '#ffd6a5', nathanShirt: '#4a90d9', nathanHair: '#3d2000',
+  particle: '#ff69b4'
 }
 
-// ===== UPDATE =====
+const LEVELS = [
+  {
+    bg1:'#2d0a4e', bg2:'#1a0a2e',
+    platforms:[
+      {x:0,   y:288, w:480, h:32},
+      {x:80,  y:224, w:96,  h:16},
+      {x:240, y:192, w:96,  h:16},
+      {x:360, y:240, w:80,  h:16},
+      {x:150, y:160, w:64,  h:16},
+    ],
+    hearts:[
+      {x:100, y:200},{x:260, y:168},{x:375, y:216},{x:170, y:136},{x:420, y:200}
+    ],
+    treats:[{x:310, y:160}],
+    ghosts:[
+      {x:200, y:256, dir:1, range:120, speed:1.2},
+      {x:360, y:208, dir:-1, range:80, speed:1.5},
+    ],
+    cage:{x:420, y:240},
+    totalHearts: 5
+  },
+  {
+    bg1:'#0a2e1a', bg2:'#0a1a2e',
+    platforms:[
+      {x:0,   y:288, w:160, h:32},
+      {x:200, y:288, w:120, h:32},
+      {x:360, y:288, w:120, h:32},
+      {x:64,  y:224, w:80,  h:16},
+      {x:200, y:208, w:80,  h:16},
+      {x:320, y:192, w:80,  h:16},
+      {x:128, y:160, w:64,  h:16},
+      {x:280, y:144, w:64,  h:16},
+      {x:400, y:224, w:64,  h:16},
+    ],
+    hearts:[
+      {x:80,  y:200},{x:210, y:184},{x:330, y:168},{x:145, y:136},{x:295, y:120},{x:410, y:200}
+    ],
+    treats:[{x:240, y:260},{x:420, y:260}],
+    ghosts:[
+      {x:100, y:256, dir:1, range:100, speed:1.4},
+      {x:220, y:256, dir:-1, range:80,  speed:1.6},
+      {x:200, y:176, dir:1, range:60,  speed:1.8},
+    ],
+    cage:{x:430, y:240},
+    totalHearts: 6
+  },
+  {
+    bg1:'#2e0a0a', bg2:'#1a0a0a',
+    platforms:[
+      {x:0,   y:288, w:96,  h:32},
+      {x:160, y:288, w:80,  h:32},
+      {x:320, y:288, w:160, h:32},
+      {x:48,  y:240, w:64,  h:16},
+      {x:160, y:224, w:64,  h:16},
+      {x:256, y:208, w:64,  h:16},
+      {x:352, y:224, w:64,  h:16},
+      {x:96,  y:176, w:64,  h:16},
+      {x:224, y:160, w:64,  h:16},
+      {x:352, y:160, w:64,  h:16},
+      {x:160, y:112, w:64,  h:16},
+      {x:288, y:96,  w:96,  h:16},
+    ],
+    hearts:[
+      {x:64,  y:216},{x:170, y:200},{x:265, y:184},{x:362, y:200},
+      {x:108, y:152},{x:232, y:136},{x:360, y:136},{x:175, y:88}
+    ],
+    treats:[{x:310, y:64},{x:60, y:208}],
+    ghosts:[
+      {x:180, y:256, dir:1, range:80, speed:1.5},
+      {x:320, y:256, dir:-1, range:80, speed:1.7},
+      {x:220, y:192, dir:1, range:80,  speed:2.0},
+      {x:290, y:128, dir:-1, range:80,  speed:2.0},
+    ],
+    cage:{x:355, y:56},
+    totalHearts: 8
+  }
+]
+
+let level = 0
+let heartsCollected = 0
+let lives = 3
+let gameRunning = false
+let won = false
+let powerTimer = 0
+let particles = []
+let cageOpen = false
+let winTimer = 0
+let camX = 0
+
+const keys = { left:false, right:false, jump:false }
+
+let player = {}
+let ghosts = []
+let hearts = []
+let treats = []
+let platforms = []
+let cage = {}
+
+function initLevel(lvl){
+  const L = LEVELS[lvl]
+  heartsCollected = 0
+  cageOpen = false
+  powerTimer = 0
+  particles = []
+  platforms = JSON.parse(JSON.stringify(L.platforms))
+  hearts = JSON.parse(JSON.stringify(L.hearts)).map(h=>({...h, collected:false}))
+  treats = JSON.parse(JSON.stringify(L.treats)).map(t=>({...t, collected:false}))
+  ghosts = JSON.parse(JSON.stringify(L.ghosts)).map(g=>({...g, startX:g.x, vy:0, phase: Math.random()*Math.PI*2}))
+  cage = {...L.cage}
+  player = { x:40, y:220, vx:0, vy:0, onGround:false, facing:1, jumpPressed:false, dead:false, deadTimer:0 }
+  camX = 0
+  updateHeartsUI()
+}
+
+function updateHeartsUI(){
+  document.getElementById('hearts-ui').textContent = `♥ ${heartsCollected}/${LEVELS[level].totalHearts}`
+  document.getElementById('level-ui').textContent = `LEVEL ${level+1}`
+  document.getElementById('lives-ui').textContent = `LIVES: ${lives}`
+  const pi = document.getElementById('power-indicator')
+  if(pi) pi.textContent = powerTimer > 0 ? `🍰 SWEET POWER! ${Math.ceil(powerTimer/60)}s` : ''
+}
+
+function spawnParticles(x, y, color, n=8){
+  for(let i=0;i<n;i++){
+    const angle = (Math.PI*2/n)*i
+    particles.push({
+      x, y,
+      vx: Math.cos(angle)*2.5*(0.5+Math.random()),
+      vy: Math.sin(angle)*2.5*(0.5+Math.random()),
+      life: 40+Math.random()*20,
+      maxLife: 60,
+      color, r: 3+Math.random()*3
+    })
+  }
+}
+
+function rectOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by
+}
+
 function update(){
-  if(!running) return
+  if(!gameRunning || won) return
+
+  if(player.dead){
+    player.deadTimer--
+    if(player.deadTimer<=0){
+      if(lives<=0){
+        showOverlay('💀 OH NO!', 'The ghost got Nathan...\n\nTry again Jerrie!', 'TRY AGAIN ♥', ()=>{ lives=3; initLevel(level); gameRunning=true })
+      } else {
+        initLevel(level)
+      }
+    }
+    return
+  }
 
   let dx = 0
   if(keys.left) dx = -SPEED
   if(keys.right) dx = SPEED
 
   player.vx = dx
+  if(dx > 0) player.facing = 1
+  if(dx < 0) player.facing = -1
 
   if(keys.jump && player.onGround && !player.jumpPressed){
     player.vy = JUMP_FORCE
@@ -136,117 +393,353 @@ function update(){
   player.onGround = false
 
   platforms.forEach(p=>{
-    if(player.x < p.x+p.w &&
-       player.x+20 > p.x &&
-       player.y < p.y+p.h &&
-       player.y+28 > p.y){
-
-      if(player.vy >= 0){
+    if(rectOverlap(player.x, player.y, 20, 28, p.x, p.y, p.w, p.h)){
+      if(player.vy >= 0 && player.y + 28 - player.vy <= p.y + 2){
         player.y = p.y - 28
         player.vy = 0
         player.onGround = true
+      } else if(player.vy < 0 && player.y - player.vy >= p.y + p.h - 2){
+        player.y = p.y + p.h
+        player.vy = 0
+      } else {
+        if(player.vx > 0) player.x = p.x - 20
+        if(player.vx < 0) player.x = p.x + p.w
       }
     }
   })
+
+  if(player.x < 0) player.x = 0
+  if(player.x > W - 20) player.x = W - 20
+
+  // FIX #3: guard with !player.dead to prevent double lives decrement
+  if(player.y > H + 40 && !player.dead){
+    lives--
+    player.dead = true
+    player.deadTimer = 60
+    spawnParticles(player.x+10, H, '#ff69b4', 12)
+  }
+
+  camX = 0
 
   hearts.forEach(h=>{
-    if(!h.collected &&
-       Math.abs(player.x-h.x)<20 &&
-       Math.abs(player.y-h.y)<20){
+    if(!h.collected && rectOverlap(player.x, player.y, 20, 28, h.x-10, h.y-10, 20, 20)){
       h.collected = true
+      heartsCollected++
+      spawnParticles(h.x, h.y, '#ff4d8d', 10)
+      if(heartsCollected >= LEVELS[level].totalHearts) cageOpen = true
+      updateHeartsUI()
     }
   })
+
+  treats.forEach(t=>{
+    if(!t.collected && rectOverlap(player.x, player.y, 20, 28, t.x-12, t.y-12, 24, 24)){
+      t.collected = true
+      powerTimer = 300
+      spawnParticles(t.x, t.y, '#ffe066', 12)
+      updateHeartsUI()
+    }
+  })
+
+  // FIX #4: only update power UI once per second
+  if(powerTimer > 0){
+    powerTimer--
+    if(powerTimer % 60 === 0) updateHeartsUI()
+  }
 
   ghosts.forEach(g=>{
-    g.x += g.dir * 1.5
-    if(g.x > 320 || g.x < 120) g.dir *= -1
+    g.phase += 0.05
+    g.x += g.dir * g.speed
+    if(g.x > g.startX + g.range || g.x < g.startX - g.range) g.dir *= -1
+    g.floatY = Math.sin(g.phase) * 6
 
-    if(Math.abs(player.x-g.x)<20 && Math.abs(player.y-g.y)<20){
-      showOverlay("💀 Game Over","Try again!","RETRY",()=>{
-        init(); running=true
-      })
+    // FIX #3: guard ghost collision with !player.dead
+    if(!player.dead && powerTimer <= 0 && rectOverlap(player.x, player.y, 20, 28, g.x-14, g.y-14+g.floatY, 28, 28)){
+      lives--
+      player.dead = true
+      player.deadTimer = 80
+      spawnParticles(player.x+10, player.y, '#b0c4ff', 12)
+      updateHeartsUI()
     }
   })
 
-  if(hearts.every(h=>h.collected)){
-    showOverlay(
-      `🎉 ${PLAYER_NAME} WINS!`,
-      `${PLAYER_NAME} reached ${PARTNER_NAME}! 💕`,
-      "PLAY AGAIN",
-      ()=>{
-        init(); running=true
+  if(cageOpen && rectOverlap(player.x, player.y, 20, 28, cage.x-16, cage.y-28, 36, 48)){
+    winTimer++
+    if(winTimer > 30){
+      won = true
+      if(level < LEVELS.length - 1){
+        showOverlay(`💕 LEVEL ${level+1} CLEAR!`, `Amazing Jerrie!\n\nKeep going to rescue Nathan!`, 'NEXT LEVEL ♥', ()=>{
+          level++; initLevel(level); gameRunning=true; won=false; winTimer=0
+        })
+      } else {
+        // FIX #5: \n\n renders correctly now via white-space: pre-line on #overlay p
+        showOverlay('🎉 YOU DID IT! 💕', '"You set me free, hooray we can snuggle now!"\n\n— Nathan 💕', 'PLAY AGAIN ♥', ()=>{
+          level=0; lives=3; initLevel(level); gameRunning=true; won=false; winTimer=0
+        })
       }
-    )
+    }
+  } else {
+    winTimer = 0
+  }
+
+  particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; p.life-- })
+  particles = particles.filter(p=>p.life>0)
+}
+
+// ---- DRAWING ----
+function drawPrincess(x, y, facing, powered){
+  ctx.save()
+  ctx.translate(x+10, y)
+  if(facing < 0) ctx.scale(-1,1)
+
+  if(powered){
+    ctx.shadowColor = '#ffe066'
+    ctx.shadowBlur = 14
+  }
+
+  ctx.fillStyle = C.princessDress
+  ctx.fillRect(-6, 12, 12, 16)
+  ctx.fillStyle = '#ff79b6'
+  ctx.fillRect(-9, 22, 18, 6)
+  ctx.fillStyle = C.princess
+  ctx.fillRect(-5, 4, 10, 12)
+  ctx.fillStyle = '#ffd6a5'
+  ctx.fillRect(-6, -8, 12, 12)
+  ctx.fillStyle = C.princessHair
+  ctx.fillRect(-7, -10, 14, 6)
+  ctx.fillRect(-8, -8, 4, 10)
+  ctx.fillStyle = C.princessCrown
+  ctx.fillRect(-5, -14, 10, 5)
+  ctx.fillRect(-7, -12, 3, 3)
+  ctx.fillRect(4, -12, 3, 3)
+  ctx.fillRect(-1, -16, 3, 4)
+  ctx.fillStyle = '#3d2000'
+  ctx.fillRect(0, -4, 2, 2)
+  ctx.fillRect(-4, -4, 2, 2)
+  ctx.fillStyle = '#c0506a'
+  ctx.fillRect(-2, 0, 5, 1)
+  ctx.fillStyle = C.princess
+  ctx.fillRect(-9, 6, 4, 8)
+  ctx.fillRect(6, 6, 4, 8)
+  ctx.fillStyle = '#f8b4d9'
+  ctx.fillRect(-4, 26, 4, 6)
+  ctx.fillRect(1, 26, 4, 6)
+
+  ctx.restore()
+}
+
+function drawNathan(x, y, cageOpen){
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.fillStyle = C.cage
+  ctx.fillRect(-16, -32, 36, 4)
+  ctx.fillRect(-16, 12, 36, 4)
+  for(let i=0;i<5;i++){
+    ctx.fillStyle = cageOpen ? '#aaaaaa44' : C.cageBar
+    ctx.fillRect(-14 + i*8, -28, 3, 40)
+  }
+  if(cageOpen){
+    ctx.fillStyle = '#ffe06680'
+    ctx.fillRect(-16, -32, 36, 48)
+  }
+  ctx.restore()
+
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.fillStyle = C.nathanShirt
+  ctx.fillRect(-5, -16, 10, 14)
+  ctx.fillStyle = C.nathan
+  ctx.fillRect(-6, -28, 12, 12)
+  ctx.fillStyle = C.nathanHair
+  ctx.fillRect(-6, -30, 12, 6)
+  ctx.fillStyle = '#3d2000'
+  ctx.fillRect(-3, -22, 2, 2)
+  ctx.fillRect(1, -22, 2, 2)
+  if(cageOpen){
+    ctx.fillStyle = '#c06050'
+    ctx.fillRect(-3, -17, 6, 2)
+    ctx.fillRect(-4, -18, 2, 2)
+    ctx.fillRect(2, -18, 2, 2)
+  } else {
+    ctx.fillStyle = '#a05040'
+    ctx.fillRect(-2, -16, 4, 1)
+  }
+  ctx.fillStyle = C.nathan
+  ctx.fillRect(-9, -14, 4, 8)
+  ctx.fillRect(5, -14, 4, 8)
+  ctx.fillStyle = '#2255aa'
+  ctx.fillRect(-4, -4, 4, 6)
+  ctx.fillRect(1, -4, 4, 6)
+  ctx.restore()
+}
+
+function drawGhost(g){
+  const fy = g.floatY || 0
+  ctx.save()
+  ctx.translate(g.x, g.y + fy)
+
+  const alpha = powerTimer > 0 ? 0.3 : 1
+  ctx.globalAlpha = alpha
+
+  ctx.fillStyle = C.ghost
+  ctx.beginPath()
+  ctx.arc(0, -10, 14, Math.PI, 0)
+  ctx.rect(-14, -10, 28, 20)
+  ctx.moveTo(-14, 10)
+  for(let i=0;i<4;i++){
+    ctx.quadraticCurveTo(-10+i*7, 18, -7+i*7, 10)
+  }
+  ctx.fill()
+
+  ctx.fillStyle = C.ghostEye
+  ctx.fillRect(-6, -14, 4, 5)
+  ctx.fillRect(2, -14, 4, 5)
+  ctx.fillStyle = '#4060cc'
+  ctx.fillRect(-4, -5, 8, 3)
+
+  ctx.globalAlpha = 1
+  ctx.restore()
+}
+
+function drawHeart(x, y, t){
+  const bob = Math.sin(t*0.05)*3
+  ctx.save()
+  ctx.translate(x, y + bob)
+  ctx.fillStyle = C.heart
+  ctx.shadowColor = C.heartGlow
+  ctx.shadowBlur = 10
+  ctx.fillRect(-5, -3, 4, 4)
+  ctx.fillRect(1, -3, 4, 4)
+  ctx.fillRect(-6, -1, 12, 4)
+  ctx.fillRect(-5, 3, 10, 3)
+  ctx.fillRect(-3, 6, 6, 2)
+  ctx.fillRect(-1, 8, 2, 2)
+  ctx.restore()
+}
+
+function drawTreat(x, y, t){
+  const bob = Math.sin(t*0.07+1)*3
+  ctx.save()
+  ctx.translate(x, y + bob)
+  ctx.shadowColor = '#ffe066'
+  ctx.shadowBlur = 12
+  ctx.fillStyle = '#ffe066'
+  ctx.fillRect(-10, -4, 20, 14)
+  ctx.fillStyle = '#ff9de2'
+  ctx.fillRect(-10, -8, 20, 6)
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(-8, -10, 4, 4)
+  ctx.fillStyle = '#ff4d8d'
+  ctx.fillRect(-6, -12, 2, 4)
+  ctx.restore()
+}
+
+function drawPlatform(p){
+  ctx.fillStyle = C.platform
+  ctx.fillRect(p.x, p.y+2, p.w, p.h-2)
+  ctx.fillStyle = C.platformTop
+  ctx.fillRect(p.x, p.y, p.w, 4)
+  ctx.fillStyle = '#c264e880'
+  for(let i=4;i<p.w-4;i+=12){
+    ctx.fillRect(p.x+i, p.y+6, 4, 2)
   }
 }
 
-// ===== DRAW =====
+let tick = 0
 function draw(){
-  ctx.fillStyle="#1a0a2e"
-  ctx.fillRect(0,0,480,320)
+  const L = LEVELS[level]
+  const grad = ctx.createLinearGradient(0,0,0,H)
+  grad.addColorStop(0, L.bg1)
+  grad.addColorStop(1, L.bg2)
+  ctx.fillStyle = grad
+  ctx.fillRect(0,0,W,H)
 
-  // platforms
-  ctx.fillStyle="#5c2d8a"
-  platforms.forEach(p=>ctx.fillRect(p.x,p.y,p.w,p.h))
+  platforms.forEach(drawPlatform)
+  hearts.forEach(h=>{ if(!h.collected) drawHeart(h.x, h.y, tick) })
+  treats.forEach(t=>{ if(!t.collected) drawTreat(t.x, t.y, tick) })
+  drawNathan(cage.x, cage.y, cageOpen)
+  ghosts.forEach(drawGhost)
 
-  // hearts
-  ctx.fillStyle="#ff4d8d"
-  hearts.forEach(h=>{
-    if(!h.collected) ctx.fillRect(h.x,h.y,10,10)
+  if(!player.dead){
+    drawPrincess(player.x, player.y, player.facing, powerTimer > 0)
+  }
+
+  particles.forEach(p=>{
+    ctx.save()
+    ctx.globalAlpha = p.life/p.maxLife
+    ctx.fillStyle = p.color
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2)
+    ctx.fill()
+    ctx.restore()
   })
 
-  // ghosts
-  ctx.fillStyle="#b0c4ff"
-  ghosts.forEach(g=>ctx.fillRect(g.x,g.y,20,20))
+  if(cageOpen && !won){
+    ctx.fillStyle = '#ffe06620'
+    ctx.fillRect(0,0,W,H)
+  }
 
-  // player (RESTORED SIZE)
-  ctx.fillStyle="#ff9de2"
-  ctx.fillRect(player.x,player.y,20,28)
-
-  // partner goal
-  ctx.fillStyle="#ffe066"
-  ctx.fillRect(440,240,20,40)
+  tick++
 }
 
-// ===== LOOP =====
 function loop(){
   update()
   draw()
   requestAnimationFrame(loop)
 }
 
-// ===== OVERLAY =====
-function showOverlay(t,m,b,cb){
+// ---- OVERLAY ----
+function showOverlay(title, msg, btnText, cb){
   const ov = document.getElementById('overlay')
-  ov.style.display='flex'
-  ov.querySelector('h1').textContent = t
-  ov.querySelector('p').textContent = m
-  ov.querySelector('button').textContent = b
-  ov.querySelector('button').onclick = ()=>{
-    ov.style.display='none'
-    cb()
-  }
+  ov.querySelector('h1').textContent = title
+  ov.querySelector('p').textContent = msg
+  const btn = ov.querySelector('button')
+  btn.textContent = btnText
+  btn.onclick = ()=>{ ov.style.display='none'; cb() }
+  ov.style.display = 'flex'
 }
 
-// ===== CONTROLS =====
+document.getElementById('start-btn').onclick = ()=>{
+  document.getElementById('overlay').style.display = 'none'
+  initLevel(level)
+  gameRunning = true
+}
+
+// ---- CONTROLS ----
 document.addEventListener('keydown', e=>{
   if(e.key==='ArrowLeft'||e.key==='a') keys.left=true
   if(e.key==='ArrowRight'||e.key==='d') keys.right=true
   if(e.key==='ArrowUp'||e.key===' '||e.key==='w') keys.jump=true
 })
-
 document.addEventListener('keyup', e=>{
   if(e.key==='ArrowLeft'||e.key==='a') keys.left=false
   if(e.key==='ArrowRight'||e.key==='d') keys.right=false
   if(e.key==='ArrowUp'||e.key===' '||e.key==='w') keys.jump=false
 })
 
-// ===== START =====
-document.getElementById('start-btn').onclick = ()=>{
-  document.getElementById('overlay').style.display='none'
-  init()
-  running = true
+// Touch buttons
+function holdBtn(id, key){
+  const btn = document.getElementById(id)
+  btn.addEventListener('touchstart', e=>{ e.preventDefault(); keys[key]=true }, {passive:false})
+  btn.addEventListener('touchend',   e=>{ e.preventDefault(); keys[key]=false }, {passive:false})
+  btn.addEventListener('touchcancel',e=>{ e.preventDefault(); keys[key]=false }, {passive:false})
+  btn.addEventListener('mousedown',  e=>{ e.preventDefault(); keys[key]=true })
+  btn.addEventListener('mouseup',    ()=>keys[key]=false)
+  btn.addEventListener('mouseleave', ()=>keys[key]=false)
 }
+
+holdBtn('btn-left','left')
+holdBtn('btn-right','right')
+holdBtn('btn-jump','jump')
+
+window.addEventListener('blur', ()=>{ keys.left=false; keys.right=false; keys.jump=false })
+
+// Prevent double-tap zoom
+let lastTouch = 0
+document.addEventListener('touchend', e=>{
+  const now = Date.now()
+  if(now - lastTouch < 300) e.preventDefault()
+  lastTouch = now
+}, {passive:false})
 
 loop()
 </script>
